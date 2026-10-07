@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class SamplePage extends StatefulWidget {
   const SamplePage({super.key});
@@ -8,16 +10,37 @@ class SamplePage extends StatefulWidget {
 }
 
 class _SamplePageState extends State<SamplePage> {
-  final List<Map<String, dynamic>> fruits = [
-    {'id': 1, 'name': 'Apple', 'description': 'Crisp and sweet, a classic fruit.'},
-    {'id': 2, 'name': 'Banana', 'description': 'Soft, tropical, and rich in potassium.'},
-    {'id': 3, 'name': 'Mango', 'description': 'Juicy and fragrant with a smooth texture.'},
-    {'id': 4, 'name': 'Orange', 'description': 'Bright and citrusy with a refreshing taste.'},
-  ];
+  List<dynamic> products = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchProducts();
+  }
+
+  Future<void> fetchProducts() async {
+    final response = await http.get(
+      Uri.parse('https://dummyjson.com/products'),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      setState(() {
+        products = data['products'];
+        isLoading = false;
+      });
+    } else {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   void deleteItem(int index) {
     setState(() {
-      fruits.removeAt(index);
+      products.removeAt(index);
     });
   }
 
@@ -25,50 +48,52 @@ class _SamplePageState extends State<SamplePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fruit List'),
+        title: const Text('Products'),
       ),
-      body: fruits.isEmpty
-          ? const Center(child: Text('No fruits available'))
-          : ListView.builder(
-              itemCount: fruits.length,
-              itemBuilder: (context, index) {
-                final fruit = fruits[index];
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : products.isEmpty
+              ? const Center(child: Text('No products available'))
+              : ListView.builder(
+                  itemCount: products.length,
+                  itemBuilder: (context, index) {
+                    final product = products[index];
 
-                return Card(
-                  margin: const EdgeInsets.all(10),
-                  child: Padding(
-                    padding: const EdgeInsets.all(15),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'ID: ${fruit['id']}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                    return Card(
+                      margin: const EdgeInsets.all(10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(15),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'ID: ${product['id']}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              product['title'],
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(product['description']),
+                            const SizedBox(height: 12),
+                            ElevatedButton.icon(
+                              onPressed: () => deleteItem(index),
+                              icon: const Icon(Icons.delete),
+                              label: const Text('Remove'),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          fruit['name'],
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(fruit['description']),
-                        const SizedBox(height: 12),
-                        ElevatedButton.icon(
-                          onPressed: () => deleteItem(index),
-                          icon: const Icon(Icons.delete),
-                          label: const Text('Remove'),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }
